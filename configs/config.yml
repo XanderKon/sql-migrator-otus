@@ -1,0 +1,3 @@
+dsn: "${DB_DSN}" # DSN connection string to DB
+dir: "migrations" # folder for migration files
+type: "go" # "go" or "sql"
