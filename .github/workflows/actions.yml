@@ -1,0 +1,83 @@
+name: sql-migrator-otus
+run-name: ${{ github.actor }} SQL Migrator Tools Project
+
+on:
+  push:
+    branches:
+      - master
+      - main
+
+env:
+  GO111MODULE: "on"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract branch name
+        run: echo "BRANCH=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ~1.21
+
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Linters
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.55.2
+          working-directory: ${{ env.BRANCH }}
+
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract branch name
+        run: echo "BRANCH=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ^1.21
+
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Unit tests
+        run: go test -v -count=1 -race -timeout=1m ./...
+        working-directory: ${{ env.BRANCH }}
+
+      - name: Optimization tests
+        run: go test -v -count=1 -timeout=1m -tags bench ./...
+        working-directory: ${{ env.BRANCH }}
+
+      - name: Bash tests
+        shell: bash
+        run: ./test.sh
+        if: ${{ hashFiles('./test.sh') != '' }}
+        working-directory: ${{ env.BRANCH }}
+
+  tests_by_makefile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ^1.21
+
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: make lint
+        run: make lint
+        working-directory: ./
+
+      - name: make build
+        run: make build
+        working-directory: ./
+
+      - name: make test
+        run: make test
+        working-directory: ./
