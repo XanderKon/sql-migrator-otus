@@ -62,7 +62,7 @@ func (l Logger) core(level logLevel, msg string, params ...any) {
 		buildedString.WriteString(msg)
 	}
 	buildedString.WriteString("\n")
-	l.writeTo.Write([]byte(buildedString.String()))
+	_, _ = l.writeTo.Write([]byte(buildedString.String()))
 }
 
 func (l Logger) Error(msg string, params ...any) {
