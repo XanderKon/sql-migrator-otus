@@ -8,9 +8,19 @@ import (
 )
 
 type Config struct {
-	DSN  string `mapstructure:"dsn"`
-	Dir  string `mapstructure:"dir"`
-	Type string `mapstructure:"type"`
+	Migrator MigratorConf `mapstructure:"migrator"`
+	Logger   LoggerConf   `mapstructure:"logger"`
+}
+
+type MigratorConf struct {
+	DSN       string `mapstructure:"dsn"`
+	Dir       string `mapstructure:"dir"`
+	Type      string `mapstructure:"type"`
+	TableName string `mapstructure:"table_name"`
+}
+
+type LoggerConf struct {
+	Level string `mapstructure:"level"`
 }
 
 func NewConfig() *Config {
