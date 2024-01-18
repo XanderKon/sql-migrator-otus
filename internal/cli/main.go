@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"flag"
@@ -11,11 +11,18 @@ import (
 var configFile string
 
 func init() {
-	flag.StringVar(&configFile, "config", "./configs/config.yml", "Path to configuration file")
+	if flag.Lookup("config") == nil {
+		flag.StringVar(&configFile, "config", "./configs/config.yml", "Path to configuration file")
+	}
 }
 
-func main() {
+func initFlags() {
+	configFile = flag.Lookup("config").Value.(flag.Getter).Get().(string)
+}
+
+func Main() {
 	flag.Parse()
+	initFlags()
 
 	if flag.Arg(0) == "version" {
 		printVersion()
@@ -29,4 +36,5 @@ func main() {
 	logg.Info("Start migrator app")
 
 	fmt.Println("Configuration: ", config.Migrator.DSN, config.Migrator.Dir, config.Migrator.Type, config.Logger.Level)
+
 }
