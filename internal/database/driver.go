@@ -24,7 +24,7 @@ type Driver interface {
 	// Open returns a new driver instance configured with parameters
 	// coming from the URL string. Migrate will call this function
 	// only once per instance.
-	Open(url string) (Driver, error)
+	Open(url string, tableName string) (Driver, error)
 
 	// Close closes the underlying database instance managed by the driver.
 	// Migrate will call this function only once per instance.
@@ -55,9 +55,12 @@ type Driver interface {
 	// When no migration has been applied, it must return version -1.
 	Version() (version int, err error)
 
-	// List returns the slice of all aplloed migrations.
+	// List returns the slice of all apllied versions of migraions.
 	// When no migration has been applied, it must return empty slice.
 	List() (versions []int, err error)
+
+	// PrepareTable just create table
+	PrepareTable() error
 }
 
 // Register globally registers a driver.
@@ -77,7 +80,7 @@ func Register(name string, driver Driver) {
 }
 
 // Open returns a new driver instance.
-func Open(url string) (Driver, error) {
+func Open(url string, tableName string) (Driver, error) {
 	i := strings.Index(url, ":")
 
 	if i < 0 {
@@ -93,5 +96,5 @@ func Open(url string) (Driver, error) {
 		return nil, ErrUnknownDriver
 	}
 
-	return d.Open(url)
+	return d.Open(url, tableName)
 }

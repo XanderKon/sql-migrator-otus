@@ -6,12 +6,14 @@ import (
 )
 
 type testDriver struct {
-	url string
+	url       string
+	tablename string
 }
 
-func (t *testDriver) Open(url string) (Driver, error) {
+func (t *testDriver) Open(url string, tablename string) (Driver, error) {
 	return &testDriver{
-		url: url,
+		url:       url,
+		tablename: tablename,
 	}, nil
 }
 
@@ -47,6 +49,10 @@ func (t *testDriver) List() (versions []int, err error) {
 	return make([]int, 0), nil
 }
 
+func (t *testDriver) PrepareTable() error {
+	return nil
+}
+
 func TestOpen(t *testing.T) {
 	// Make sure the driver is registered.
 	// But if the previous test already registered it just ignore the panic.
@@ -74,7 +80,7 @@ func TestOpen(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.url, func(t *testing.T) {
-			d, err := Open(c.url)
+			d, err := Open(c.url, "migrations")
 
 			if err == nil {
 				if c.err {
