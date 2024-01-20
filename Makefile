@@ -4,7 +4,7 @@ GIT_HASH := $(shell git log --format="%h" -n 1)
 LDFLAGS := -X main.release="develop" -X main.buildDate=$(shell date -u +%Y-%m-%dT%H:%M:%S) -X main.gitHash=$(GIT_HASH)
 
 build:
-	go build -v -o $(BIN) -ldflags "$(LDFLAGS)" ./cmd/gomigrator
+	go build -tags "postgres" -v -o $(BIN) -ldflags "$(LDFLAGS)" ./cmd/gomigrator
 
 run: build
 	$(BIN) -config ./configs/config.yml
