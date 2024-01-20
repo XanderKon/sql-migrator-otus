@@ -17,7 +17,7 @@ var (
 var driversMu sync.RWMutex
 
 // list of available drivers for application
-// [JUST POSTGRES IN OUR PROJECT CASE]
+// [JUST POSTGRES IN OUR PROJECT CASE].
 var drivers = make(map[string]Driver)
 
 type Driver interface {

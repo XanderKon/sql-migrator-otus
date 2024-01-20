@@ -10,13 +10,6 @@ type Up struct {
 	Logger   *logger.Logger
 }
 
-func (c *Up) Run(args []string) error {
-
-	err := c.Migrator.Up()
-
-	if err != nil {
-		return err
-	}
-
-	return nil
+func (c *Up) Run(_ []string) error {
+	return c.Migrator.Up()
 }

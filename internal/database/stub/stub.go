@@ -7,13 +7,14 @@ import (
 )
 
 type Stub struct {
+	url       string
 	tablename string
 	isLocked  bool
 	version   int
 	list      []int
 }
 
-// init itself
+// init itself.
 func init() {
 	s := Stub{}
 	database.Register("stub", &s)
@@ -22,6 +23,7 @@ func init() {
 func (p *Stub) Open(url string, tablename string) (database.Driver, error) {
 	// create new DB instance
 	instance := &Stub{
+		url:       url,
 		tablename: tablename,
 	}
 
@@ -33,7 +35,6 @@ func (p *Stub) Close() error {
 }
 
 func (p *Stub) Lock() error {
-	// TODO
 	if p.isLocked {
 		return database.ErrLocked
 	}
@@ -41,12 +42,10 @@ func (p *Stub) Lock() error {
 }
 
 func (p *Stub) Unlock() error {
-	// TODO
 	return nil
 }
 
-func (p *Stub) Run(migration io.Reader) error {
-	// TODO
+func (p *Stub) Run(_ io.Reader) error {
 	return nil
 }
 
@@ -56,7 +55,7 @@ func (p *Stub) SetVersion(version int) error {
 	return nil
 }
 
-func (p *Stub) DeleteVersion(version int) error {
+func (p *Stub) DeleteVersion(_ int) error {
 	return nil
 }
 
@@ -72,7 +71,7 @@ func (p *Stub) List() ([]int, error) {
 	return p.list, nil
 }
 
-// Create migrations table
+// Create migrations table.
 func (p *Stub) PrepareTable() error {
 	return nil
 }

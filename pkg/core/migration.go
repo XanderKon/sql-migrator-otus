@@ -1,7 +1,6 @@
 package core
 
 import (
-	"context"
 	"database/sql"
 )
 
@@ -33,18 +32,18 @@ func New() *Migration {
 }
 
 // Up runs an up migration.
-func (m *Migration) Up(db *sql.DB) error {
+func (m *Migration) Up(_ *sql.DB) error {
 	// ctx := context.Background()
 	return nil
 }
 
 // Down runs a down migration.
-func (m *Migration) Down(db *sql.DB) error {
+func (m *Migration) Down(_ *sql.DB) error {
 	// ctx := context.Background()
 	return nil
 }
 
-// Internal logic of migration here
-func (m *Migration) run(ctx context.Context, db *sql.DB, direction bool) error {
-	return nil
-}
+// Internal logic of migration here.
+// func (m *Migration) run(_ context.Context, _ *sql.DB, _ bool) error {
+// 	return nil
+// }

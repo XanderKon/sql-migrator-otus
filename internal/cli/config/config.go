@@ -25,7 +25,7 @@ type LoggerConf struct {
 }
 
 func NewConfig() *Config {
-	var configFile = flag.Lookup("config").Value.(flag.Getter).Get().(string)
+	configFile := flag.Lookup("config").Value.(flag.Getter).Get().(string)
 
 	v := viper.New()
 	v.AutomaticEnv()

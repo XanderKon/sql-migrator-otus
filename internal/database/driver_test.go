@@ -29,23 +29,23 @@ func (t *testDriver) Unlock() error {
 	return nil
 }
 
-func (t *testDriver) Run(migration io.Reader) error {
+func (t *testDriver) Run(_ io.Reader) error {
 	return nil
 }
 
-func (t *testDriver) SetVersion(version int) error {
+func (t *testDriver) SetVersion(_ int) error {
 	return nil
 }
 
-func (t *testDriver) DeleteVersion(version int) error {
+func (t *testDriver) DeleteVersion(_ int) error {
 	return nil
 }
 
-func (t *testDriver) Version() (version int, err error) {
+func (t *testDriver) Version() (_ int, err error) {
 	return 0, nil
 }
 
-func (t *testDriver) List() (versions []int, err error) {
+func (t *testDriver) List() (_ []int, err error) {
 	return make([]int, 0), nil
 }
 
@@ -82,17 +82,19 @@ func TestOpen(t *testing.T) {
 		t.Run(c.url, func(t *testing.T) {
 			d, err := Open(c.url, "migrations")
 
-			if err == nil {
-				if c.err {
-					t.Fatal("should be error for wrong driver")
-				} else {
-					if md, ok := d.(*testDriver); !ok {
-						t.Fatalf("expected *testDriver got %T", d)
-					} else if md.url != c.url {
-						t.Fatalf("expected %q got %q", c.url, md.url)
-					}
+			if err == nil && c.err {
+				t.Fatal("should be error for wrong driver")
+			}
+
+			if err == nil && !c.err {
+				if md, ok := d.(*testDriver); !ok {
+					t.Fatalf("expected *testDriver got %T", d)
+				} else if md.url != c.url {
+					t.Fatalf("expected %q got %q", c.url, md.url)
 				}
-			} else if !c.err {
+			}
+
+			if !c.err && err != nil {
 				t.Fatalf("did not expect %q", err)
 			}
 		})

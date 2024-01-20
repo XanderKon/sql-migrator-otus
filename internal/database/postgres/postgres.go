@@ -9,12 +9,11 @@ import (
 	"time"
 
 	"github.com/XanderKon/sql-migrator-otus/internal/database"
+	// Dynamic build.
 	_ "github.com/lib/pq"
 )
 
-var (
-	ErrConnClose = fmt.Errorf("can't close connection")
-)
+var ErrConnClose = fmt.Errorf("can't close connection")
 
 type Postgres struct {
 	db        *sql.DB
@@ -23,7 +22,7 @@ type Postgres struct {
 	isLocked  bool
 }
 
-// init itself
+// init itself.
 func init() {
 	psql := Postgres{}
 	database.Register("postgres", &psql)
@@ -53,10 +52,8 @@ func (p *Postgres) Open(url string, tablename string) (database.Driver, error) {
 }
 
 func (p *Postgres) Close() error {
-	err := p.db.Close()
-
-	if err != nil {
-		return fmt.Errorf("conn close error: %v", err)
+	if err := p.db.Close(); err != nil {
+		return fmt.Errorf("conn close error: %w", err)
 	}
 	return nil
 }
@@ -74,7 +71,7 @@ func (p *Postgres) Unlock() error {
 	return nil
 }
 
-func (p *Postgres) Run(migration io.Reader) error {
+func (p *Postgres) Run(_ io.Reader) error {
 	// TODO
 	return nil
 }
@@ -137,10 +134,7 @@ func (p *Postgres) Version() (int, error) {
 func (p *Postgres) List() ([]int, error) {
 	const query = `SELECT version FROM %s ORDER BY version;`
 
-	rows, err := p.db.QueryContext(
-		p.ctx,
-		fmt.Sprintf(query, p.tablename),
-	)
+	rows, err := p.db.QueryContext(p.ctx, fmt.Sprintf(query, p.tablename))
 	if err != nil {
 		return []int{}, err
 	}
@@ -159,10 +153,16 @@ func (p *Postgres) List() ([]int, error) {
 		versions = append(versions, version)
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
 	return versions, nil
 }
 
-// Create migrations table
+// Create migrations table.
 func (p *Postgres) PrepareTable() error {
 	const query = `
 		CREATE TABLE IF NOT EXISTS %s (

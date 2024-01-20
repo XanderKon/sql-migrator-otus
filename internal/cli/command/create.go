@@ -13,9 +13,7 @@ import (
 	"github.com/XanderKon/sql-migrator-otus/internal/logger"
 )
 
-var (
-	ErrMissingName = errors.New("no migration name was set")
-)
+var ErrMissingName = errors.New("no migration name was set")
 
 type tmplVars struct {
 	Name string
@@ -51,7 +49,7 @@ func (c *Create) create(name string) error {
 	}
 
 	// try to create path
-	err := os.MkdirAll(c.Cfg.Dir, 0755)
+	err := os.MkdirAll(c.Cfg.Dir, 0o755)
 	if err != nil {
 		return fmt.Errorf("failed to create migration folder: %w", err)
 	}
@@ -87,7 +85,6 @@ func (c *Create) snakeCase(s string) string {
 	diff := 'a' - 'A'
 	l := len(s)
 	for i, v := range s {
-
 		// replace all dots and other "danger" symbols
 		ss := string(v)
 		if ss == "+" || ss == "-" || ss == "—" || ss == "." || ss == "/" || ss == "," || ss == "_" {

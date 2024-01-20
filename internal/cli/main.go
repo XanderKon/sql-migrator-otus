@@ -81,7 +81,7 @@ func Main() {
 
 	if err != nil {
 		logger.Error("can't initialize migrator api! %s", err)
-		os.Exit(1)
+		return
 	}
 
 	switch flag.Arg(0) {
@@ -103,7 +103,7 @@ func Main() {
 	if err != nil {
 		logger.Error("Error executing CLI: %s\n", err.Error())
 		logger.Info("Try 'gomigrator help' for more information.")
-		os.Exit(1)
+		return
 	}
 }
 
