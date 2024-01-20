@@ -3,3 +3,4 @@
 bin/
 logs/
 migrations/
+!pkg/core/test/migrations
