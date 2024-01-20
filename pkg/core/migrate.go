@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"net/http"
 	"path"
+	"sort"
 	"strings"
 
 	"github.com/XanderKon/sql-migrator-otus/internal/database"
@@ -122,6 +123,11 @@ func (m *Migrate) findAvailableMigrations() (Migrations, error) {
 			migrations = append(migrations, migration)
 		}
 	}
+
+	// insure then they are sorted by version correctly
+	sort.Slice(migrations, func(i, j int) bool {
+		return migrations[i].Version < migrations[j].Version
+	})
 
 	return migrations, nil
 }
