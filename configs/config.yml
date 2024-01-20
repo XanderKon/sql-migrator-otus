@@ -1,7 +1,8 @@
 migrator:
   dsn: ${DB_DSN} # DSN connection string to DB
-  dir: migrations # folder for migration files
-  type: go # "go" or "sql"
+  dir: ./migrations # folder for migration files
+  type: sql # "go" or "sql"
+  table_name: migrations # name of table with migrations
 
 logger:
   level: INFO

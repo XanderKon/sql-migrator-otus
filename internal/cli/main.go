@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/XanderKon/sql-migrator-otus/internal/cli/command"
+	"github.com/XanderKon/sql-migrator-otus/internal/cli/config"
 	"github.com/XanderKon/sql-migrator-otus/internal/logger"
 )
 
@@ -17,8 +19,6 @@ func init() {
 }
 
 func initFlags() {
-	configFile = flag.Lookup("config").Value.(flag.Getter).Get().(string)
-
 	flag.Usage = func() {
 		fmt.Fprintf(
 			os.Stderr,
@@ -55,11 +55,40 @@ https://github.com/golang-migrate/migrate
 func Main() {
 	initFlags()
 
-	config := NewConfig()
+	// init config
+	cfg := config.NewConfig()
 
-	logg := logger.New(config.Logger.Level, os.Stdout)
+	// init logger
+	logger := logger.New(cfg.Logger.Level, os.Stdout)
 
-	logg.Info("Start migrator app")
+	// get args
+	args := flag.Args()
 
+	if len(args) == 0 {
+		printUsage()
+	}
+
+	var cmd command.Command
+
+	switch flag.Arg(0) {
+	case "create":
+		cmd = &command.Create{
+			Cfg:    &cfg.Migrator,
+			Logger: logger,
+		}
+	default:
+		printUsage()
+	}
+
+	err := cmd.Run(args[1:])
+	if err != nil {
+		logger.Error("Error executing CLI: %s\n", err.Error())
+		logger.Info("Try 'gomigrator help' for more information.")
+		os.Exit(1)
+	}
+}
+
+func printUsage() {
 	flag.Usage()
+	os.Exit(1)
 }
