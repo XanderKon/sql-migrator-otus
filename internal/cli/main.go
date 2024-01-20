@@ -8,6 +8,7 @@ import (
 	"github.com/XanderKon/sql-migrator-otus/internal/cli/command"
 	"github.com/XanderKon/sql-migrator-otus/internal/cli/config"
 	"github.com/XanderKon/sql-migrator-otus/internal/logger"
+	"github.com/XanderKon/sql-migrator-otus/pkg/core"
 )
 
 var configFile string
@@ -70,17 +71,35 @@ func Main() {
 
 	var cmd command.Command
 
+	// init migrate api
+	migrator, err := core.NewMigrator(cfg.Migrator.DSN, cfg.Migrator.TableName, cfg.Migrator.Dir)
+
+	// add logger
+	migrator.Log = *logger
+
+	defer migrator.Close()
+
+	if err != nil {
+		logger.Error("can't initialize migrator api! %s", err)
+		os.Exit(1)
+	}
+
 	switch flag.Arg(0) {
 	case "create":
 		cmd = &command.Create{
 			Cfg:    &cfg.Migrator,
 			Logger: logger,
 		}
+	case "up":
+		cmd = &command.Up{
+			Migrator: migrator,
+			Logger:   logger,
+		}
 	default:
 		printUsage()
 	}
 
-	err := cmd.Run(args[1:])
+	err = cmd.Run(args[1:])
 	if err != nil {
 		logger.Error("Error executing CLI: %s\n", err.Error())
 		logger.Info("Try 'gomigrator help' for more information.")
