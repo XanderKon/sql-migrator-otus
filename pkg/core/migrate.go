@@ -136,6 +136,17 @@ func (m *Migrate) Redo() error {
 	return nil
 }
 
+func (m *Migrate) Dbversion() error {
+	currentMigration, err := m.currentMigration()
+	if errors.Is(err, ErrNoCurrentVersion) {
+		m.Log.Info(err.Error())
+		return nil
+	}
+
+	m.Log.Info("Current migration version: %d", currentMigration.Version)
+	return nil
+}
+
 // close migrator API
 // just close DB connection in our case.
 func (m *Migrate) Close() error {

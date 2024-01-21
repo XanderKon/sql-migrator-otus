@@ -105,6 +105,11 @@ func Main() {
 			Migrator: migrator,
 			Logger:   logger,
 		}
+	case "dbversion":
+		cmd = &command.Dbversion{
+			Migrator: migrator,
+			Logger:   logger,
+		}
 	default:
 		printUsage()
 	}
