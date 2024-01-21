@@ -1,6 +1,9 @@
 -- +gomigrator Up
-SELECT * FROM test_table tt INNER JOIN some_table st ON tt.id = st.foreign_k WHERE tt.status = 1 ORDER BY tt.field LIMIT 15;
+ALTER TABLE test 
+ADD COLUMN column_int int,
+ADD COLUMN column_datetime timestamp;
 
 -- +gomigrator Down
-TRUNCATE grass;
-            
+ALTER TABLE test 
+DROP COLUMN column_int,
+DROP COLUMN column_datetime;

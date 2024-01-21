@@ -20,7 +20,7 @@ func TestFindAvailableMigrations(t *testing.T) {
 	assert.NoError(t, err)
 
 	// exact two file exist
-	assert.Len(t, migrations, 2)
+	assert.Len(t, migrations, 3)
 
 	// check parse Version && correct order of files
 	m := migrations[0]
