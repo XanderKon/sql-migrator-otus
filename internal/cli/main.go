@@ -73,16 +73,16 @@ func Main() {
 
 	// init migrate api
 	migrator, err := core.NewMigrator(cfg.Migrator.DSN, cfg.Migrator.TableName, cfg.Migrator.Dir)
-
-	// add logger
-	migrator.Log = *logger
-
-	defer migrator.Close()
-
 	if err != nil {
 		logger.Error("can't initialize migrator api! %s", err)
 		return
 	}
+
+	// add logger
+	migrator.Log = *logger
+
+	// close migrator (DB connection in simple case)
+	defer migrator.Close()
 
 	switch flag.Arg(0) {
 	case "create":
@@ -92,6 +92,11 @@ func Main() {
 		}
 	case "up":
 		cmd = &command.Up{
+			Migrator: migrator,
+			Logger:   logger,
+		}
+	case "down":
+		cmd = &command.Down{
 			Migrator: migrator,
 			Logger:   logger,
 		}

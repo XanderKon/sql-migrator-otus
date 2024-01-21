@@ -165,8 +165,9 @@ func (p *Postgres) List() ([]int64, error) {
 	if err != nil {
 		return []int64{}, err
 	}
+	defer rows.Close()
 
-	var versions []int64
+	versions := make([]int64, 0)
 
 	for rows.Next() {
 		var version int64
@@ -183,8 +184,6 @@ func (p *Postgres) List() ([]int64, error) {
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-
-	defer rows.Close()
 
 	return versions, nil
 }

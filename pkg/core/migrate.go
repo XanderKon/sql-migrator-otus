@@ -75,7 +75,7 @@ func (m *Migrate) Up() error {
 			return fmt.Errorf("can't execute migration with version %d: %w", migr.Version, err)
 		}
 
-		// set version here if success
+		// set version if success
 		m.setVersion(migr.Version)
 		m.Log.Info("Migration %d successfully applied!", migr.Version)
 	}
@@ -84,7 +84,32 @@ func (m *Migrate) Up() error {
 	return nil
 }
 
-func (m *Migrate) Down() {
+func (m *Migrate) Down() error {
+	if err := m.lock(); err != nil {
+		return err
+	}
+
+	migrations, err := m.migrationsForRun(false, 1)
+
+	if errors.Is(err, ErrNoAvailableMigrations) || errors.Is(err, ErrAlreadyUpToDate) {
+		m.Log.Info(err.Error())
+		return nil
+	} else if err != nil {
+		return err
+	}
+
+	for _, migr := range migrations {
+		if err := m.driver.Run(strings.NewReader(migr.DownSQL)); err != nil {
+			return fmt.Errorf("can't execute migration with version %d: %w", migr.Version, err)
+		}
+
+		// delete version if success
+		m.deleteVersion(migr.Version)
+		m.Log.Info("Migration %d successfully rollback!", migr.Version)
+	}
+
+	defer m.unlock()
+	return nil
 }
 
 func (m *Migrate) Redo() {
@@ -99,7 +124,7 @@ func (m *Migrate) Close() error {
 // prepare migrations slice for next Run
 // up -- direction
 // limit -- how many migrations should be executed (0 -- without limit).
-func (m *Migrate) migrationsForRun(up bool, _ int) (Migrations, error) {
+func (m *Migrate) migrationsForRun(up bool, limit int) (Migrations, error) {
 	// get available migrations
 	availableMigrations, err := m.findAvailableMigrations()
 	if err != nil {
@@ -137,20 +162,20 @@ func (m *Migrate) migrationsForRun(up bool, _ int) (Migrations, error) {
 		})
 
 		// filter them
-		for i, migr := range availableMigrations {
-			if availableMigrations[i].Version <= appliedVersions[0] {
+		for _, migr := range availableMigrations {
+			if migr.Version <= appliedVersions[len(appliedVersions)-1] {
 				migrationsForRun = append(migrationsForRun, migr)
 			}
 		}
 	} else {
 		// filter them
-		for i, migr := range availableMigrations {
+		for _, migr := range availableMigrations {
 			// if it already applied - skip
-			if slices.Contains(appliedVersions, availableMigrations[i].Version) {
+			if slices.Contains(appliedVersions, migr.Version) {
 				continue
 			}
 
-			if availableMigrations[i].Version > appliedVersions[0] {
+			if migr.Version > appliedVersions[0] {
 				migrationsForRun = append(migrationsForRun, migr)
 			}
 		}
@@ -158,6 +183,11 @@ func (m *Migrate) migrationsForRun(up bool, _ int) (Migrations, error) {
 
 	if len(migrationsForRun) == 0 {
 		return make(Migrations, 0), ErrAlreadyUpToDate
+	}
+
+	// slice target slice
+	if limit > 0 {
+		migrationsForRun = migrationsForRun[0:limit]
 	}
 
 	return migrationsForRun, nil
@@ -264,6 +294,20 @@ func (m *Migrate) setVersion(version int64) error {
 	err := m.driver.SetVersion(version)
 	if err != nil {
 		return fmt.Errorf("can't set new migraion version: %w", err)
+	}
+
+	defer m.unlock()
+	return nil
+}
+
+func (m *Migrate) deleteVersion(version int64) error {
+	if err := m.lock(); err != nil {
+		return err
+	}
+
+	err := m.driver.DeleteVersion(version)
+	if err != nil {
+		return fmt.Errorf("can't delete migraion version: %w", err)
 	}
 
 	defer m.unlock()
