@@ -23,6 +23,7 @@ linters-settings:
           - github.com/cenkalti/backoff
           - github.com/streadway/amqp
           - github.com/stretchr/testify/assert
+          - github.com/jedib0t/go-pretty/v6/table
       tests:
         listMode: Lax
         files:

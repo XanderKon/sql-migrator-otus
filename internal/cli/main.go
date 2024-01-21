@@ -110,6 +110,10 @@ func Main() {
 			Migrator: migrator,
 			Logger:   logger,
 		}
+	case "status":
+		cmd = &command.Status{
+			Migrator: migrator,
+		}
 	default:
 		printUsage()
 	}

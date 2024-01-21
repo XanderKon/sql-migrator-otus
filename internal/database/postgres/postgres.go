@@ -158,27 +158,28 @@ func (p *Postgres) Version() (int64, error) {
 
 // List returns the slice of all apllied versions of migraions.
 // When no migration has been applied, it must return empty slice.
-func (p *Postgres) List() ([]int64, error) {
-	const query = `SELECT version FROM %s ORDER BY version;`
+func (p *Postgres) List() ([]*database.ListInfo, error) {
+	const query = `SELECT version, applied_at FROM %s ORDER BY version;`
 
 	rows, err := p.db.QueryContext(p.ctx, fmt.Sprintf(query, p.tablename))
 	if err != nil {
-		return []int64{}, err
+		return []*database.ListInfo{}, err
 	}
 	defer rows.Close()
 
-	versions := make([]int64, 0)
+	var versions []*database.ListInfo
 
 	for rows.Next() {
-		var version int64
+		v := &database.ListInfo{}
 		err := rows.Scan(
-			&version,
+			&v.Version,
+			&v.AppliedAt,
 		)
 		if err != nil {
 			return nil, err
 		}
 
-		versions = append(versions, version)
+		versions = append(versions, v)
 	}
 
 	if err := rows.Err(); err != nil {

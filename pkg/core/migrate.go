@@ -153,6 +153,40 @@ func (m *Migrate) Close() error {
 	return m.driver.Close()
 }
 
+// get mapped list of migrations.
+func (m *Migrate) FullList() ([]*Migration, error) {
+	migrations := make([]*Migration, 0)
+
+	if err := m.lock(); err != nil {
+		return migrations, err
+	}
+
+	list, err := m.driver.List()
+	if err != nil {
+		return migrations, fmt.Errorf("can't get full list of applied migraions: %w", err)
+	}
+
+	// get available migrations
+	availableMigrations, err := m.findAvailableMigrations()
+	if err != nil {
+		return migrations, err
+	}
+
+	// mapping
+	for _, migr := range list {
+		migration, err := m.getMigrationByVersion(availableMigrations, migr.Version)
+		if err == nil {
+			// add applied_at time.
+			migration.AppliedAt = migr.AppliedAt
+			migrations = append(migrations, migration)
+		}
+	}
+
+	defer m.unlock()
+
+	return migrations, nil
+}
+
 // prepare migrations slice for next Run
 // up -- direction
 // limit -- how many migrations should be executed (0 -- without limit).
@@ -169,9 +203,14 @@ func (m *Migrate) migrationsForRun(up bool, limit int) (Migrations, error) {
 	}
 
 	// get list of applied migrations
-	appliedVersions, err := m.list()
+	lofm, err := m.list()
 	if err != nil {
 		return make(Migrations, 0), err
+	}
+
+	appliedVersions := []int64{}
+	for _, ap := range lofm {
+		appliedVersions = append(appliedVersions, ap.Version)
 	}
 
 	// if we go down and don't have any applied migrations - do nothing
@@ -308,6 +347,7 @@ func (m *Migrate) parseSQLMigration(info fs.FileInfo) (*Migration, error) {
 
 	migration := &Migration{
 		Version: version,
+		Source:  info.Name(),
 	}
 
 	parsed, err := parser.ParseMigration(file)
@@ -367,14 +407,14 @@ func (m *Migrate) deleteVersion(version int64) error {
 	return nil
 }
 
-func (m *Migrate) list() ([]int64, error) {
+func (m *Migrate) list() ([]*database.ListInfo, error) {
 	if err := m.lock(); err != nil {
-		return []int64{}, err
+		return []*database.ListInfo{}, err
 	}
 
 	list, err := m.driver.List()
 	if err != nil {
-		return []int64{}, fmt.Errorf("can't get list of applied migraions: %w", err)
+		return []*database.ListInfo{}, fmt.Errorf("can't get list of applied migraions: %w", err)
 	}
 
 	defer m.unlock()

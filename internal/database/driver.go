@@ -5,6 +5,7 @@ import (
 	"io"
 	"strings"
 	"sync"
+	"time"
 )
 
 var (
@@ -19,6 +20,11 @@ var driversMu sync.RWMutex
 // list of available drivers for application
 // [JUST POSTGRES IN OUR PROJECT CASE].
 var drivers = make(map[string]Driver)
+
+type ListInfo struct {
+	Version   int64
+	AppliedAt time.Time
+}
 
 type Driver interface {
 	// Open returns a new driver instance configured with parameters
@@ -57,7 +63,7 @@ type Driver interface {
 
 	// List returns the slice of all apllied versions of migraions.
 	// When no migration has been applied, it must return empty slice.
-	List() (versions []int64, err error)
+	List() (versions []*ListInfo, err error)
 
 	// PrepareTable just create table
 	PrepareTable() error

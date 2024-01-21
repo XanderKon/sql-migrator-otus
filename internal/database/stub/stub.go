@@ -11,7 +11,7 @@ type Stub struct {
 	tablename string
 	isLocked  bool
 	version   int64
-	list      []int64
+	list      []*database.ListInfo
 }
 
 // init itself.
@@ -67,7 +67,7 @@ func (p *Stub) Version() (int64, error) {
 
 // List returns the slice of all apllied versions of migraions.
 // When no migration has been applied, it must return empty slice.
-func (p *Stub) List() ([]int64, error) {
+func (p *Stub) List() ([]*database.ListInfo, error) {
 	return p.list, nil
 }
 

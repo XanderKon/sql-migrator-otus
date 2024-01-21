@@ -45,8 +45,8 @@ func (t *testDriver) Version() (_ int64, err error) {
 	return 0, nil
 }
 
-func (t *testDriver) List() (_ []int64, err error) {
-	return make([]int64, 0), nil
+func (t *testDriver) List() (_ []*ListInfo, err error) {
+	return make([]*ListInfo, 0), nil
 }
 
 func (t *testDriver) PrepareTable() error {

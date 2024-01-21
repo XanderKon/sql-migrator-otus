@@ -2,6 +2,7 @@ package core
 
 import (
 	"database/sql"
+	"time"
 )
 
 type Migration struct {
@@ -13,6 +14,9 @@ type Migration struct {
 
 	// Path to file
 	Source string
+
+	// Path to file
+	AppliedAt time.Time
 
 	// Link to next Migration
 	Next *Migration
