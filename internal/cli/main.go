@@ -100,6 +100,11 @@ func Main() {
 			Migrator: migrator,
 			Logger:   logger,
 		}
+	case "redo":
+		cmd = &command.Redo{
+			Migrator: migrator,
+			Logger:   logger,
+		}
 	default:
 		printUsage()
 	}
