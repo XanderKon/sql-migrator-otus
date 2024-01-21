@@ -33,20 +33,20 @@ func (t *testDriver) Run(_ io.Reader) error {
 	return nil
 }
 
-func (t *testDriver) SetVersion(_ int) error {
+func (t *testDriver) SetVersion(_ int64) error {
 	return nil
 }
 
-func (t *testDriver) DeleteVersion(_ int) error {
+func (t *testDriver) DeleteVersion(_ int64) error {
 	return nil
 }
 
-func (t *testDriver) Version() (_ int, err error) {
+func (t *testDriver) Version() (_ int64, err error) {
 	return 0, nil
 }
 
-func (t *testDriver) List() (_ []int, err error) {
-	return make([]int, 0), nil
+func (t *testDriver) List() (_ []int64, err error) {
+	return make([]int64, 0), nil
 }
 
 func (t *testDriver) PrepareTable() error {

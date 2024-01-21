@@ -10,8 +10,8 @@ type Stub struct {
 	url       string
 	tablename string
 	isLocked  bool
-	version   int
-	list      []int
+	version   int64
+	list      []int64
 }
 
 // init itself.
@@ -49,25 +49,25 @@ func (p *Stub) Run(_ io.Reader) error {
 	return nil
 }
 
-func (p *Stub) SetVersion(version int) error {
+func (p *Stub) SetVersion(version int64) error {
 	p.version = version
 
 	return nil
 }
 
-func (p *Stub) DeleteVersion(_ int) error {
+func (p *Stub) DeleteVersion(_ int64) error {
 	return nil
 }
 
 // Version returns the currently active version.
 // When no migration has been applied, it must return version -1.
-func (p *Stub) Version() (int, error) {
+func (p *Stub) Version() (int64, error) {
 	return p.version, nil
 }
 
 // List returns the slice of all apllied versions of migraions.
 // When no migration has been applied, it must return empty slice.
-func (p *Stub) List() ([]int, error) {
+func (p *Stub) List() ([]int64, error) {
 	return p.list, nil
 }
 

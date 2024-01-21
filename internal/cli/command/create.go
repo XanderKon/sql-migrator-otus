@@ -34,7 +34,7 @@ func (c *Create) Run(args []string) error {
 
 func (c *Create) create(name string) error {
 	// define new version of migration file.
-	version := time.Now().UTC().Format(timestampFormat)
+	version := time.Now().UTC().UnixMilli()
 
 	// define full filename
 	fullname := fmt.Sprintf("%v_%v", version, c.snakeCase(name))

@@ -22,10 +22,16 @@ func TestFindAvailableMigrations(t *testing.T) {
 	// exact two file exist
 	assert.Len(t, migrations, 2)
 
-	// check parse Version
+	// check parse Version && correct order of files
 	m := migrations[0]
-	assert.Equal(t, "20240120195817", m.Version)
+	assert.Equal(t, int64(20240120195817), m.Version)
 
 	m = migrations[1]
-	assert.Equal(t, "20240120196753", m.Version)
+	assert.Equal(t, int64(20240120196753), m.Version)
+}
+
+func TestGetVersionFromFileName(t *testing.T) {
+	version := testMigrator.getVersionFromFileName("1234_test_migr.sql")
+	assert.NotEmpty(t, version)
+	assert.Equal(t, version, int64(1234))
 }

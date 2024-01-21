@@ -6,7 +6,7 @@ import (
 
 type Migration struct {
 	// Migration version
-	Version string
+	Version int64
 
 	// Type of migration (sql or go)
 	Type string
@@ -20,11 +20,11 @@ type Migration struct {
 	// Link to prev Migration
 	Prev *Migration
 
-	// Slice for statements to run up (used by SQL-migrations)
-	UpSQL []string
+	// Statements to run up (used by SQL-migrations)
+	UpSQL string
 
-	// Slice for statements to run down (used by SQL-migrations)
-	DownSQL []string
+	// Statements to run down (used by SQL-migrations)
+	DownSQL string
 }
 
 func New() *Migration {

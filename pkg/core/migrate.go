@@ -6,7 +6,9 @@ import (
 	"io/fs"
 	"net/http"
 	"path"
+	"slices"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/XanderKon/sql-migrator-otus/internal/database"
@@ -14,7 +16,11 @@ import (
 	"github.com/XanderKon/sql-migrator-otus/internal/parser"
 )
 
-var ErrNoCurrentVersion = errors.New("no current version found")
+var (
+	ErrNoCurrentVersion      = errors.New("no current version found")
+	ErrNoAvailableMigrations = errors.New("no available migrations found")
+	ErrAlreadyUpToDate       = errors.New("already up to date")
+)
 
 type Migrate struct {
 	Log logger.Logger
@@ -55,9 +61,23 @@ func (m *Migrate) Up() error {
 		return err
 	}
 
-	_, err := m.migrationsForRun(true, 0)
-	if err != nil {
+	migrations, err := m.migrationsForRun(true, 0)
+
+	if errors.Is(err, ErrNoAvailableMigrations) || errors.Is(err, ErrAlreadyUpToDate) {
+		m.Log.Info(err.Error())
+		return nil
+	} else if err != nil {
 		return err
+	}
+
+	for _, migr := range migrations {
+		if err := m.driver.Run(strings.NewReader(migr.UpSQL)); err != nil {
+			return fmt.Errorf("can't execute migration with version %d: %w", migr.Version, err)
+		}
+
+		// set version here if success
+		m.setVersion(migr.Version)
+		m.Log.Info("Migration %d successfully applied!", migr.Version)
 	}
 
 	defer m.unlock()
@@ -79,25 +99,79 @@ func (m *Migrate) Close() error {
 // prepare migrations slice for next Run
 // up -- direction
 // limit -- how many migrations should be executed (0 -- without limit).
-func (m *Migrate) migrationsForRun(_ bool, _ int) (Migrations, error) {
+func (m *Migrate) migrationsForRun(up bool, _ int) (Migrations, error) {
 	// get available migrations
-	_, err := m.findAvailableMigrations()
-	// get list of applied migrations
-	// appliedVersions, err := m.list()
+	availableMigrations, err := m.findAvailableMigrations()
 	if err != nil {
 		return make(Migrations, 0), err
 	}
 
-	// // get current migration
-	// curr, err := m.current()
+	// no available migrations, so skip all the next
+	if len(availableMigrations) == 0 {
+		return make(Migrations, 0), ErrNoAvailableMigrations
+	}
 
-	// if err != nil {
-	// 	return err
-	// }
-	// return m.driver.PrepareTable()
+	// get list of applied migrations
+	appliedVersions, err := m.list()
+	if err != nil {
+		return make(Migrations, 0), err
+	}
 
-	return make(Migrations, 0), nil
+	// if we go down and don't have any applied migrations - do nothing
+	if len(appliedVersions) == 0 && !up {
+		return make(Migrations, 0), ErrAlreadyUpToDate
+	}
+
+	// if we go up and don't have any applied migrations - run all of then
+	if len(appliedVersions) == 0 && up {
+		return availableMigrations, nil
+	}
+
+	var migrationsForRun Migrations
+
+	// calc the difference between them
+	if !up {
+		// sort desc
+		sort.Slice(availableMigrations, func(i, j int) bool {
+			return availableMigrations[i].Version > availableMigrations[j].Version
+		})
+
+		// filter them
+		for i, migr := range availableMigrations {
+			if availableMigrations[i].Version <= appliedVersions[0] {
+				migrationsForRun = append(migrationsForRun, migr)
+			}
+		}
+	} else {
+		// filter them
+		for i, migr := range availableMigrations {
+			// if it already applied - skip
+			if slices.Contains(appliedVersions, availableMigrations[i].Version) {
+				continue
+			}
+
+			if availableMigrations[i].Version > appliedVersions[0] {
+				migrationsForRun = append(migrationsForRun, migr)
+			}
+		}
+	}
+
+	if len(migrationsForRun) == 0 {
+		return make(Migrations, 0), ErrAlreadyUpToDate
+	}
+
+	return migrationsForRun, nil
 }
+
+// func (m *Migrate) getMigrationByVersion(migraions Migrations, version int64) (*Migration, error) {
+// 	for _, migr := range migraions {
+// 		if migr.Version == version {
+// 			return migr, nil
+// 		}
+// 	}
+
+// 	return nil, fmt.Errorf("no migration find by version %d", version)
+// }
 
 func (m *Migrate) findAvailableMigrations() (Migrations, error) {
 	migrations := make([]*Migration, 0)
@@ -164,10 +238,12 @@ func (m *Migrate) parseSQLMigration(info fs.FileInfo) (*Migration, error) {
 	return migration, nil
 }
 
-func (m *Migrate) getVersionFromFileName(filename string) string {
+func (m *Migrate) getVersionFromFileName(filename string) int64 {
 	version := strings.Split(filename, "_")[0]
 
-	return version
+	i, _ := strconv.ParseInt(version, 10, 64)
+
+	return i
 }
 
 // create migrations table if it doesn't exist.
@@ -180,34 +256,34 @@ func (m *Migrate) prepareDatabase() error {
 	return m.driver.PrepareTable()
 }
 
-// func (m *Migrate) setVersion(version int) error {
-// 	if err := m.lock(); err != nil {
-// 		return err
-// 	}
+func (m *Migrate) setVersion(version int64) error {
+	if err := m.lock(); err != nil {
+		return err
+	}
 
-// 	err := m.driver.SetVersion(version)
-// 	if err != nil {
-// 		return fmt.Errorf("can't set new migraion version: %w", err)
-// 	}
+	err := m.driver.SetVersion(version)
+	if err != nil {
+		return fmt.Errorf("can't set new migraion version: %w", err)
+	}
 
-// 	defer m.unlock()
-// 	return nil
-// }
+	defer m.unlock()
+	return nil
+}
 
-// func (m *Migrate) list() ([]int, error) {
-// 	if err := m.lock(); err != nil {
-// 		return []int{}, err
-// 	}
+func (m *Migrate) list() ([]int64, error) {
+	if err := m.lock(); err != nil {
+		return []int64{}, err
+	}
 
-// 	versions, err := m.driver.List()
-// 	if err != nil {
-// 		return []int{}, fmt.Errorf("can't get list of applied migraions: %w", err)
-// 	}
+	list, err := m.driver.List()
+	if err != nil {
+		return []int64{}, fmt.Errorf("can't get list of applied migraions: %w", err)
+	}
 
-// 	defer m.unlock()
+	defer m.unlock()
 
-// 	return versions, nil
-// }
+	return list, nil
+}
 
 // Get current migration version from DB driver.
 // func (m *Migrate) current() (int, error) {

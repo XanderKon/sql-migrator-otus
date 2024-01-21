@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/XanderKon/sql-migrator-otus/internal/database"
@@ -71,12 +72,38 @@ func (p *Postgres) Unlock() error {
 	return nil
 }
 
-func (p *Postgres) Run(_ io.Reader) error {
-	// TODO
+// just run migration statement in transactions mode.
+func (p *Postgres) Run(migration io.Reader) error {
+	migr, err := io.ReadAll(migration)
+	if err != nil {
+		return err
+	}
+
+	query := string(migr)
+	if strings.TrimSpace(query) == "" {
+		return nil
+	}
+
+	tx, err := p.db.BeginTx(p.ctx, &sql.TxOptions{})
+	if err != nil {
+		return err
+	}
+
+	if _, err := tx.Exec(query); err != nil {
+		if errRollback := tx.Rollback(); errRollback != nil {
+			return err
+		}
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (p *Postgres) SetVersion(version int) error {
+func (p *Postgres) SetVersion(version int64) error {
 	const query = `
 		INSERT INTO %s (version, applied_at)
 		VALUES (%d, $1)
@@ -90,7 +117,7 @@ func (p *Postgres) SetVersion(version int) error {
 	return err
 }
 
-func (p *Postgres) DeleteVersion(version int) error {
+func (p *Postgres) DeleteVersion(version int64) error {
 	const query = `DELETE FROM %s WHERE version = %d;`
 
 	_, err := p.db.ExecContext(
@@ -103,7 +130,7 @@ func (p *Postgres) DeleteVersion(version int) error {
 
 // Version returns the currently active version.
 // When no migration has been applied, it must return version -1.
-func (p *Postgres) Version() (int, error) {
+func (p *Postgres) Version() (int64, error) {
 	const query = `SELECT version FROM %s ORDER BY version DESC LIMIT 1;`
 
 	row := p.db.QueryRowContext(
@@ -111,7 +138,7 @@ func (p *Postgres) Version() (int, error) {
 		fmt.Sprintf(query, p.tablename),
 	)
 
-	var version int
+	var version int64
 	err := row.Scan(
 		&version,
 	)
@@ -131,18 +158,18 @@ func (p *Postgres) Version() (int, error) {
 
 // List returns the slice of all apllied versions of migraions.
 // When no migration has been applied, it must return empty slice.
-func (p *Postgres) List() ([]int, error) {
+func (p *Postgres) List() ([]int64, error) {
 	const query = `SELECT version FROM %s ORDER BY version;`
 
 	rows, err := p.db.QueryContext(p.ctx, fmt.Sprintf(query, p.tablename))
 	if err != nil {
-		return []int{}, err
+		return []int64{}, err
 	}
 
-	var versions []int
+	var versions []int64
 
 	for rows.Next() {
-		var version int
+		var version int64
 		err := rows.Scan(
 			&version,
 		)

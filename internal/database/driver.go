@@ -45,19 +45,19 @@ type Driver interface {
 
 	// SetVersion saves version.
 	// Migrate will call this function before and after each call to Run.
-	SetVersion(version int) error
+	SetVersion(version int64) error
 
 	// DeleteVersion removes version.
 	// Migrate will call this function before and after each call to Run.
-	DeleteVersion(version int) error
+	DeleteVersion(version int64) error
 
 	// Version returns the currently active version.
 	// When no migration has been applied, it must return version -1.
-	Version() (version int, err error)
+	Version() (version int64, err error)
 
 	// List returns the slice of all apllied versions of migraions.
 	// When no migration has been applied, it must return empty slice.
-	List() (versions []int, err error)
+	List() (versions []int64, err error)
 
 	// PrepareTable just create table
 	PrepareTable() error

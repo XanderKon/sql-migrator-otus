@@ -58,7 +58,7 @@ func TestCreate(t *testing.T) {
 			}
 
 			for _, f := range tt.filenames {
-				time.Sleep(900 * time.Millisecond)
+				time.Sleep(1 * time.Second)
 				err := cmd.create(f)
 				if tt.expectedErr == nil && err != nil {
 					t.Errorf("Unexpected rrror: %v", err)

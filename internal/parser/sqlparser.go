@@ -8,8 +8,8 @@ import (
 )
 
 type ParsedMigration struct {
-	UpStatements   []string
-	DownStatements []string
+	UpStatements   string
+	DownStatements string
 }
 
 var prefix = "-- +gomigrator"
@@ -50,9 +50,9 @@ func ParseMigration(r io.ReadSeeker) (*ParsedMigration, error) {
 		}
 
 		if direction == "up" {
-			p.UpStatements = append(p.UpStatements, strings.TrimSpace(buf.String()))
+			p.UpStatements += buf.String()
 		} else {
-			p.DownStatements = append(p.DownStatements, strings.TrimSpace(buf.String()))
+			p.DownStatements += buf.String()
 		}
 		buf.Reset()
 	}
