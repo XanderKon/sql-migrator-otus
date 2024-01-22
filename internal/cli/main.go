@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -79,7 +80,7 @@ func Main() {
 	}
 
 	// add logger
-	migrator.Log = *logger
+	migrator.Log = logger
 
 	// close migrator (DB connection in simple case)
 	defer migrator.Close()
@@ -119,10 +120,11 @@ func Main() {
 	}
 
 	err = cmd.Run(args[1:])
-	if err != nil {
+	if errors.Is(err, core.ErrAlreadyUpToDate) || errors.Is(err, core.ErrNoAvailableMigrations) {
+		logger.Info(err.Error())
+	} else if err != nil {
 		logger.Error("Error executing CLI: %s\n", err.Error())
 		logger.Info("Try 'gomigrator help' for more information.")
-		return
 	}
 }
 

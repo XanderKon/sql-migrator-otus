@@ -10,7 +10,7 @@ import (
 var testMigrator *Migrate
 
 func init() {
-	testMigrator, _ = NewMigrator("stub://stub:stub@localhost:111/gomigrator", "migrations", "./test/migrations")
+	testMigrator, _ = NewMigrator("stub://stub:stub@localhost:111/gomigrator", "migrations", "../../test/migrations")
 }
 
 func TestFindAvailableMigrations(t *testing.T) {

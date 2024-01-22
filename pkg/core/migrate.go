@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/XanderKon/sql-migrator-otus/internal/database"
+	_ "github.com/XanderKon/sql-migrator-otus/internal/database/postgres" // add pg support.
 	"github.com/XanderKon/sql-migrator-otus/internal/logger"
 	"github.com/XanderKon/sql-migrator-otus/internal/parser"
 )
@@ -22,8 +23,10 @@ var (
 	ErrAlreadyUpToDate       = errors.New("already up to date")
 )
 
+const DefaultTableName = "migrations"
+
 type Migrate struct {
-	Log logger.Logger
+	Log *logger.Logger
 
 	driver    database.Driver
 	tablename string
@@ -34,6 +37,10 @@ type Migrate struct {
 type Migrations []*Migration
 
 func NewMigrator(dsn string, tableName string, dir string) (*Migrate, error) {
+	if tableName == "" {
+		tableName = DefaultTableName
+	}
+
 	// get driver
 	driver, err := database.Open(dsn, tableName)
 	if err != nil {
@@ -62,11 +69,7 @@ func (m *Migrate) Up() error {
 	}
 
 	migrations, err := m.migrationsForRun(true, 0)
-
-	if errors.Is(err, ErrNoAvailableMigrations) || errors.Is(err, ErrAlreadyUpToDate) {
-		m.Log.Info(err.Error())
-		return m.unlock(nil)
-	} else if err != nil {
+	if err != nil {
 		return m.unlock(err)
 	}
 
@@ -77,7 +80,7 @@ func (m *Migrate) Up() error {
 
 		// set version if success
 		m.setVersion(migr.Version)
-		m.Log.Info("Migration %d successfully applied!", migr.Version)
+		m.printLog(fmt.Sprintf("Migration %d successfully applied!", migr.Version))
 	}
 
 	return m.unlock(nil)
@@ -89,11 +92,7 @@ func (m *Migrate) Down() error {
 	}
 
 	migrations, err := m.migrationsForRun(false, 1)
-
-	if errors.Is(err, ErrNoAvailableMigrations) || errors.Is(err, ErrAlreadyUpToDate) {
-		m.Log.Info(err.Error())
-		return m.unlock(nil)
-	} else if err != nil {
+	if err != nil {
 		return m.unlock(err)
 	}
 
@@ -104,7 +103,7 @@ func (m *Migrate) Down() error {
 
 		// delete version if success
 		m.deleteVersion(migr.Version)
-		m.Log.Info("Migration %d successfully rollback!", migr.Version)
+		m.printLog(fmt.Sprintf("Migration %d successfully rollback!", migr.Version))
 	}
 
 	return m.unlock(nil)
@@ -117,7 +116,7 @@ func (m *Migrate) Redo() error {
 
 	currentMigration, err := m.currentMigration()
 	if errors.Is(err, ErrNoCurrentVersion) {
-		m.Log.Info(err.Error())
+		m.printLog(err.Error())
 		return m.unlock(nil)
 	}
 
@@ -126,32 +125,31 @@ func (m *Migrate) Redo() error {
 		return m.unlock(fmt.Errorf("can't rollback migration with version %d: %w", currentMigration.Version, err))
 	}
 	m.deleteVersion(currentMigration.Version)
-	m.Log.Info("Migration %d successfully rollback!", currentMigration.Version)
+	m.printLog(fmt.Sprintf("Migration %d successfully rollback!", currentMigration.Version))
 
 	// ...and then run to up
 	if err := m.driver.Run(strings.NewReader(currentMigration.UpSQL)); err != nil {
 		return m.unlock(fmt.Errorf("can't execute migration with version %d: %w", currentMigration.Version, err))
 	}
 	m.setVersion(currentMigration.Version)
-	m.Log.Info("Migration %d successfully applied!", currentMigration.Version)
+	m.printLog(fmt.Sprintf("Migration %d successfully applied!", currentMigration.Version))
 
 	return m.unlock(nil)
 }
 
-func (m *Migrate) Dbversion() error {
+func (m *Migrate) Dbversion() (int64, error) {
 	if err := m.lock(); err != nil {
-		return err
+		return -1, err
 	}
 	defer m.unlock(nil)
 
 	currentMigration, err := m.currentMigration()
-	if errors.Is(err, ErrNoCurrentVersion) {
-		m.Log.Info(err.Error())
-		return nil
+	if err != nil {
+		return -1, ErrNoCurrentVersion
 	}
 
-	m.Log.Info("Current migration version: %d", currentMigration.Version)
-	return nil
+	m.printLog(fmt.Sprintf("Current migration version: %d", currentMigration.Version))
+	return currentMigration.Version, nil
 }
 
 // close migrator API
@@ -430,9 +428,14 @@ func (m *Migrate) unlock(prevError error) error {
 		if prevError != nil {
 			finalError = fmt.Errorf("%w. Additional err: %w", finalError, prevError)
 		}
-		m.Log.Error(finalError.Error())
 		return finalError
 	}
 
 	return prevError
+}
+
+func (m *Migrate) printLog(msg string) {
+	if m.Log != nil {
+		m.Log.Info(msg)
+	}
 }
