@@ -3,6 +3,7 @@ package parser
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"io"
 	"strings"
 )
@@ -13,6 +14,8 @@ type ParsedMigration struct {
 }
 
 var prefix = "-- +gomigrator"
+
+var ErrIncorrectTemplate = errors.New("incorrect sql-migration template")
 
 func ParseMigration(r io.ReadSeeker) (*ParsedMigration, error) {
 	p := &ParsedMigration{}
@@ -41,6 +44,11 @@ func ParseMigration(r io.ReadSeeker) (*ParsedMigration, error) {
 			}
 
 			direction = "down"
+		}
+
+		// if no direction found, terminate
+		if direction == "" {
+			return nil, ErrIncorrectTemplate
 		}
 
 		if !strings.HasPrefix(line, "-- +") {
