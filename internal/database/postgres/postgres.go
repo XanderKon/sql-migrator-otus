@@ -14,13 +14,17 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// Postgres lock mechanism based on pg_try_advisory_lock.
+//
+// crc64.Checksum([]byte("gomigrX"), crc64.MakeTable(crc64.ECMA)).
+const DefaultLockID int64 = 2726469007706392142
+
 var ErrConnClose = fmt.Errorf("can't close connection")
 
 type Postgres struct {
 	db        *sql.DB
 	tablename string
 	ctx       context.Context
-	isLocked  bool
 }
 
 // init itself.
@@ -60,16 +64,30 @@ func (p *Postgres) Close() error {
 }
 
 func (p *Postgres) Lock() error {
-	// TODO
-	if p.isLocked {
-		return database.ErrLocked
+	row := p.db.QueryRowContext(p.ctx, "SELECT pg_try_advisory_lock($1)", DefaultLockID)
+	var locked string
+	if err := row.Scan(&locked); err != nil {
+		return fmt.Errorf("failed to execute pg_try_advisory_lock: %w", err)
 	}
-	return nil
+	if locked != "" {
+		// A session-level advisory lock was acquired.
+		return nil
+	}
+
+	return database.ErrLocked
 }
 
 func (p *Postgres) Unlock() error {
-	// TODO
-	return nil
+	var unlocked bool
+	row := p.db.QueryRowContext(p.ctx, "SELECT pg_advisory_unlock($1)", DefaultLockID)
+	if err := row.Scan(&unlocked); err != nil {
+		return fmt.Errorf("failed to execute pg_advisory_unlock: %w", err)
+	}
+	if unlocked {
+		// A session-level advisory lock was released.
+		return nil
+	}
+	return database.ErrUnlock
 }
 
 // just run migration statement in transactions mode.
@@ -96,11 +114,7 @@ func (p *Postgres) Run(migration io.Reader) error {
 		return err
 	}
 
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-
-	return nil
+	return tx.Commit()
 }
 
 func (p *Postgres) SetVersion(version int64) error {

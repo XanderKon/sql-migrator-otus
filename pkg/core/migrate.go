@@ -65,14 +65,14 @@ func (m *Migrate) Up() error {
 
 	if errors.Is(err, ErrNoAvailableMigrations) || errors.Is(err, ErrAlreadyUpToDate) {
 		m.Log.Info(err.Error())
-		return nil
+		return m.unlock(nil)
 	} else if err != nil {
-		return err
+		return m.unlock(err)
 	}
 
 	for _, migr := range migrations {
 		if err := m.driver.Run(strings.NewReader(migr.UpSQL)); err != nil {
-			return fmt.Errorf("can't execute migration with version %d: %w", migr.Version, err)
+			return m.unlock(fmt.Errorf("can't execute migration with version %d: %w", migr.Version, err))
 		}
 
 		// set version if success
@@ -80,8 +80,7 @@ func (m *Migrate) Up() error {
 		m.Log.Info("Migration %d successfully applied!", migr.Version)
 	}
 
-	defer m.unlock()
-	return nil
+	return m.unlock(nil)
 }
 
 func (m *Migrate) Down() error {
@@ -93,14 +92,14 @@ func (m *Migrate) Down() error {
 
 	if errors.Is(err, ErrNoAvailableMigrations) || errors.Is(err, ErrAlreadyUpToDate) {
 		m.Log.Info(err.Error())
-		return nil
+		return m.unlock(nil)
 	} else if err != nil {
-		return err
+		return m.unlock(err)
 	}
 
 	for _, migr := range migrations {
 		if err := m.driver.Run(strings.NewReader(migr.DownSQL)); err != nil {
-			return fmt.Errorf("can't rollback migration with version %d: %w", migr.Version, err)
+			return m.unlock(fmt.Errorf("can't rollback migration with version %d: %w", migr.Version, err))
 		}
 
 		// delete version if success
@@ -108,35 +107,43 @@ func (m *Migrate) Down() error {
 		m.Log.Info("Migration %d successfully rollback!", migr.Version)
 	}
 
-	defer m.unlock()
-	return nil
+	return m.unlock(nil)
 }
 
 func (m *Migrate) Redo() error {
+	if err := m.lock(); err != nil {
+		return err
+	}
+
 	currentMigration, err := m.currentMigration()
 	if errors.Is(err, ErrNoCurrentVersion) {
 		m.Log.Info(err.Error())
-		return nil
+		return m.unlock(nil)
 	}
 
 	// rollback it first
 	if err := m.driver.Run(strings.NewReader(currentMigration.DownSQL)); err != nil {
-		return fmt.Errorf("can't rollback migration with version %d: %w", currentMigration.Version, err)
+		return m.unlock(fmt.Errorf("can't rollback migration with version %d: %w", currentMigration.Version, err))
 	}
 	m.deleteVersion(currentMigration.Version)
 	m.Log.Info("Migration %d successfully rollback!", currentMigration.Version)
 
 	// ...and then run to up
 	if err := m.driver.Run(strings.NewReader(currentMigration.UpSQL)); err != nil {
-		return fmt.Errorf("can't execute migration with version %d: %w", currentMigration.Version, err)
+		return m.unlock(fmt.Errorf("can't execute migration with version %d: %w", currentMigration.Version, err))
 	}
 	m.setVersion(currentMigration.Version)
 	m.Log.Info("Migration %d successfully applied!", currentMigration.Version)
 
-	return nil
+	return m.unlock(nil)
 }
 
 func (m *Migrate) Dbversion() error {
+	if err := m.lock(); err != nil {
+		return err
+	}
+	defer m.unlock(nil)
+
 	currentMigration, err := m.currentMigration()
 	if errors.Is(err, ErrNoCurrentVersion) {
 		m.Log.Info(err.Error())
@@ -163,13 +170,13 @@ func (m *Migrate) FullList() ([]*Migration, error) {
 
 	list, err := m.driver.List()
 	if err != nil {
-		return migrations, fmt.Errorf("can't get full list of applied migraions: %w", err)
+		return migrations, m.unlock(fmt.Errorf("can't get full list of applied migraions: %w", err))
 	}
 
 	// get available migrations
 	availableMigrations, err := m.findAvailableMigrations()
 	if err != nil {
-		return migrations, err
+		return migrations, m.unlock(err)
 	}
 
 	// mapping
@@ -182,7 +189,7 @@ func (m *Migrate) FullList() ([]*Migration, error) {
 		}
 	}
 
-	defer m.unlock()
+	m.unlock(nil)
 
 	return migrations, nil
 }
@@ -371,79 +378,61 @@ func (m *Migrate) getVersionFromFileName(filename string) int64 {
 
 // create migrations table if it doesn't exist.
 func (m *Migrate) prepareDatabase() error {
-	if err := m.lock(); err != nil {
-		return err
-	}
-
-	defer m.unlock()
 	return m.driver.PrepareTable()
 }
 
 func (m *Migrate) setVersion(version int64) error {
-	if err := m.lock(); err != nil {
-		return err
-	}
-
 	err := m.driver.SetVersion(version)
 	if err != nil {
 		return fmt.Errorf("can't set new migraion version: %w", err)
 	}
 
-	defer m.unlock()
 	return nil
 }
 
 func (m *Migrate) deleteVersion(version int64) error {
-	if err := m.lock(); err != nil {
-		return err
-	}
-
 	err := m.driver.DeleteVersion(version)
 	if err != nil {
 		return fmt.Errorf("can't delete migraion version: %w", err)
 	}
 
-	defer m.unlock()
 	return nil
 }
 
 func (m *Migrate) list() ([]*database.ListInfo, error) {
-	if err := m.lock(); err != nil {
-		return []*database.ListInfo{}, err
-	}
-
 	list, err := m.driver.List()
 	if err != nil {
 		return []*database.ListInfo{}, fmt.Errorf("can't get list of applied migraions: %w", err)
 	}
-
-	defer m.unlock()
 
 	return list, nil
 }
 
 // Get current migration version from DB driver.
 func (m *Migrate) current() (int64, error) {
-	if err := m.lock(); err != nil {
-		return -1, err
-	}
-
 	curVersion, err := m.driver.Version()
 	if err != nil {
 		return -1, fmt.Errorf("can't get current migration: %w", err)
 	}
 
-	defer m.unlock()
-
 	return curVersion, nil
 }
 
+// lock the driver.
 func (m *Migrate) lock() error {
 	return m.driver.Lock()
 }
 
-func (m *Migrate) unlock() {
+// release lock and return err if exists.
+func (m *Migrate) unlock(prevError error) error {
 	if err := m.driver.Unlock(); err != nil {
-		m.Log.Error(fmt.Errorf("can't unlock from database driver: %w", err).Error())
+		finalError := fmt.Errorf("can't unlock from database driver: %w", err)
+		if prevError != nil {
+			finalError = fmt.Errorf("%w. Additional err: %w", finalError, prevError)
+		}
+		m.Log.Error(finalError.Error())
+		return finalError
 	}
+
+	return prevError
 }

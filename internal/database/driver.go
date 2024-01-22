@@ -12,7 +12,7 @@ var (
 	ErrParseDSN      = fmt.Errorf("can't get driver from dsn string")
 	ErrUnknownDriver = fmt.Errorf("unknown driver")
 	ErrLocked        = fmt.Errorf("can't acquire lock")
-	ErrNotLocked     = fmt.Errorf("can't unlock, as not currently locked")
+	ErrUnlock        = fmt.Errorf("can't unlock, as not currently locked")
 )
 
 var driversMu sync.RWMutex
