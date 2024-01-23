@@ -1,3 +1,4 @@
+GOBIN ?= $$(go env GOPATH)/bin
 BIN := "./bin/gomigrator"
 
 GIT_HASH := $(shell git log --format="%h" -n 1)
@@ -22,12 +23,22 @@ version: build
 	$(BIN) version
 
 test:
-	go test -race ./internal/... ./pkg/...
+	go test -race ./...
 
 install-lint-deps:
 	(which golangci-lint > /dev/null) || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell go env GOPATH)/bin v1.55.2
 
+integration_test:
+	DSN=postgresql://postgres:postgres@localhost:5432/gomigrator DIR=./migrations go test -tags integration
+
 lint: install-lint-deps
 	golangci-lint run ./...
 
-.PHONY: build run build-img run-img version test lint
+install-go-test-coverage:
+	go install github.com/vladopajic/go-test-coverage/v2@latest
+
+check-coverage: install-go-test-coverage
+	go test ./internal/... ./pkg/... -coverprofile=./cover.out -covermode=atomic -coverpkg=./...
+	${GOBIN}/go-test-coverage --config=./.testcoverage.yml
+
+.PHONY: build run build-img run-img version test lint install-lint-deps integration_test install-go-test-coverage check-coverage

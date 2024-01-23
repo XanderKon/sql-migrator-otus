@@ -4,3 +4,4 @@ bin/
 logs/
 migrations/
 !test/migrations
+cover.out
