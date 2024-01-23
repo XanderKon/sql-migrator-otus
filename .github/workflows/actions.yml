@@ -46,8 +46,15 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Unit tests
-        run: go test -v -count=1 -race -timeout=1m ./...
+        run: go test -v -count=1 -race -timeout=1m ./... -coverprofile=./cover.out -covermode=atomic -coverpkg=./...
         working-directory: ./
+
+      - name: Check test coverage
+        uses: vladopajic/go-test-coverage@v2
+        with:
+          config: ./.github/.testcoverage.yml
+          git-branch: badges
+          git-token: ${{ github.ref_name == 'main' && secrets.GITHUB_TOKEN || '' }}
 
       - name: Optimization tests
         run: go test -v -count=1 -timeout=1m -tags bench ./...

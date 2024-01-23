@@ -1,6 +1,7 @@
 # Инструмент "SQL-мигратор"
 
 [![Test](https://github.com/XanderKon/sql-migrator-otus/actions/workflows/actions.yml/badge.svg)](https://github.com/XanderKon/sql-migrator-otus/actions/workflows/actions.yml)
+[![coverage](https://raw.githubusercontent.com/XanderKon/sql-migrator-otus/badges/.badges/main/coverage.svg)](/.github/.testcoverage.yml)
 
 ## Технологии
 
