@@ -119,5 +119,5 @@ jobs:
       - name: install gomigrator
         run: go install ./...
       - name: postgres
-        run: DSN=postgresql://${{env.PGUSER}}:${{env.PGPASSWORD}}@${{env.PGHOST}}:5432/${{env.PGDATABASE}} DIR=./migrations go test -v -count=1 -timeout=1m -tags integration ./
+        run: DSN=postgresql://${{env.PGUSER}}:${{env.PGPASSWORD}}@${{env.PGHOST}}:5432/${{env.PGDATABASE}}?sslmode=disable DIR=./migrations go test -v -count=1 -timeout=1m -tags integration ./
         working-directory: ./test
