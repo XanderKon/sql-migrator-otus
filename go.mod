@@ -1,6 +1,6 @@
 module github.com/XanderKon/sql-migrator-otus
 
-go 1.21.6
+go 1.21
 
 require (
 	github.com/jedib0t/go-pretty/v6 v6.5.3
