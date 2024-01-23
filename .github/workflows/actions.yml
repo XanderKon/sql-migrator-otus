@@ -81,7 +81,8 @@ jobs:
       - name: make test
         run: make test
         working-directory: ./
-  integration:
+
+  integration_tests:
     needs:
       - tests
       - lint
@@ -93,6 +94,7 @@ jobs:
         image: postgres:14
         env:
           POSTGRES_PASSWORD: "password"
+          POSTGRES_DB: "gomigrator"
         ports:
           - 5432:5432
         options: >-
