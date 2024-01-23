@@ -115,9 +115,6 @@ jobs:
         with:
           cache: true
           cache-dependency-path: go.sum
-      - name: setup database
-        run: |
-          psql -U postgres -c 'CREATE DATABASE ${{env.PGDATABASE}};'
       - name: install gomigrator
         run: go install ./...
       - name: postgres
