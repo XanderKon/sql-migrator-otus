@@ -81,3 +81,43 @@ jobs:
       - name: make test
         run: make test
         working-directory: ./
+  integration:
+    needs:
+      - tests
+      - lint
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_PASSWORD: "password"
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGHOST: "127.0.0.1"
+      PGUSER: "postgres"
+      PGPASSWORD: "password"
+      PGDATABASE: "gomigrator"
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: setup-go
+        uses: actions/setup-go@v4
+        with:
+          cache: true
+          cache-dependency-path: go.sum
+      - name: setup database
+        run: |
+          psql -U postgres -c 'CREATE DATABASE ${{env.PGDATABASE}};'
+      - name: install gomigrator
+        run: go install ./...
+      - name: postgres
+        run: DSN=postgresql://${{env.PGUSER}}:${{env.PGPASSWORD}}@${{env.PGHOST}}:5432/${{env.PGDATABASE}} DIR=./migrations go test -v -count=1 -timeout=1m -tags integration ./
+        working-directory: ./test
