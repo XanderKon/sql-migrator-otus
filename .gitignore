@@ -5,3 +5,5 @@ logs/
 migrations/
 !test/migrations
 cover.out
+go.work
+go.work.sum
