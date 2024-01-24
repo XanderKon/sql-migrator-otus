@@ -4,6 +4,7 @@ bin/
 logs/
 migrations/
 !test/migrations
+!build/migrations
 cover.out
 go.work
 go.work.sum

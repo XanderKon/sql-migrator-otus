@@ -1,5 +1,6 @@
 GOBIN ?= $$(go env GOPATH)/bin
 BIN := "./bin/gomigrator"
+DOCKER_IMG := "gomigrator-image"
 
 GIT_HASH := $(shell git log --format="%h" -n 1)
 LDFLAGS := -X main.release="develop" -X main.buildDate=$(shell date -u +%Y-%m-%dT%H:%M:%S) -X main.gitHash=$(GIT_HASH)
@@ -7,17 +8,43 @@ LDFLAGS := -X main.release="develop" -X main.buildDate=$(shell date -u +%Y-%m-%d
 build:
 	go build -tags "postgres" -v -o $(BIN) -ldflags "$(LDFLAGS)" ./cmd/gomigrator
 
+build-for-docker:
+	CGO_ENABLED=0 go build -tags "postgres" -v -o $(BIN) -ldflags "$(LDFLAGS)" ./cmd/gomigrator
+
 run: build
 	$(BIN) -config ./configs/config.yml
 
 build-img:
 	docker build \
 		--build-arg=LDFLAGS="$(LDFLAGS)" \
+		--build-arg=BIN="$(BIN)" \
 		-t $(DOCKER_IMG) \
 		-f build/Dockerfile .
 
 run-img: build-img
 	docker run $(DOCKER_IMG)
+
+run-compose:
+	docker compose -f "./build/docker-compose.yml" up -d --no-deps --build
+
+# Just for demo
+run-compose-demo:
+	docker compose -f "./build/docker-compose.yml" up -d --no-deps --build
+	docker compose -f "./build/docker-compose.yml" exec -it app gomigrator status && \
+	docker compose -f "./build/docker-compose.yml" exec -it app gomigrator up && \
+	docker compose -f "./build/docker-compose.yml" exec -it app gomigrator dbversion && \
+	docker compose -f "./build/docker-compose.yml" exec -it app gomigrator status && \
+	docker compose -f "./build/docker-compose.yml" exec -it app gomigrator down && \
+	docker compose -f "./build/docker-compose.yml" exec -it app gomigrator status && \
+	docker compose -f "./build/docker-compose.yml" exec -it app gomigrator redo && \
+	docker compose -f "./build/docker-compose.yml" exec -it app gomigrator status && \
+	docker compose -f "./build/docker-compose.yml" exec -it app gomigrator create test_new_migration && \
+	docker compose -f "./build/docker-compose.yml" exec -it app gomigrator up && \
+	docker compose -f "./build/docker-compose.yml" exec -it app gomigrator status && \
+	docker compose -f "./build/docker-compose.yml" down
+
+down-compose:
+	docker compose -f "./build/docker-compose.yml" down
 
 version: build
 	$(BIN) version
@@ -41,4 +68,4 @@ check-coverage: install-go-test-coverage
 	go test ./internal/... ./pkg/... -coverprofile=./cover.out -covermode=atomic -coverpkg=./...
 	${GOBIN}/go-test-coverage --config=./.testcoverage.yml
 
-.PHONY: build run build-img run-img version test lint install-lint-deps integration_test install-go-test-coverage check-coverage
+.PHONY: build build-for-docker run build-img run-img run-compose run-compose-demo down-compose version test lint install-lint-deps integration_test install-go-test-coverage check-coverage

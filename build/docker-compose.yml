@@ -1,0 +1,28 @@
+version: "3"
+
+services:
+  db:
+    image: postgres:14.9
+    environment:
+      POSTGRES_DB: gomigrator
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      PGDATA: /var/lib/postgresql/data/pgdata
+      TZ: Europe/Moscow
+      PGTZ: Europe/Moscow
+    ports:
+      - "5434:5432"    
+    healthcheck:
+      test: pg_isready -U postgres
+  app:
+    build:
+      dockerfile: ./build/Dockerfile
+      context: '../'
+      args:
+        - BIN=./bin/gomigrator
+    volumes:
+      - ./migrations:/usr/bin/migrations
+    depends_on:
+      db:
+        condition: service_healthy
+
