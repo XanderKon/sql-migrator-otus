@@ -122,6 +122,22 @@ gomigrator create test_migration
 
 Миграция будет создана в директории, указанной в файле конфигурации.
 
+Шаблон SQL-миграции:
+
+```sql
+-- +gomigrator Up
+CREATE TABLE IF NOT EXISTS test (
+	id serial NOT NULL,
+	test text
+);
+SELECT * FROM test;
+
+-- +gomigrator Down
+DROP TABLE test;
+```
+
+Согласно шаблону, инструкции `-- +gomigrator Up` и `-- +gomigrator Down` должны присутствовать в **обязательном** порядке!
+
 **Запуск всех миграции**
 
 ```bash
