@@ -28,7 +28,7 @@ test:
 install-lint-deps:
 	(which golangci-lint > /dev/null) || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell go env GOPATH)/bin v1.55.2
 
-integration_test:
+integration-tests:
 	DSN=postgresql://postgres:postgres@localhost:5432/gomigrator DIR=./migrations go test -tags integration
 
 lint: install-lint-deps
