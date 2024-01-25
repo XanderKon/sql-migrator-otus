@@ -24,7 +24,7 @@ go ~1.21
 
 ## Конфигурация
 
-Задаётся в файле `configs/config.yml`
+Задаётся в yml-файле `configs/config.yml`
 
 | Параметр   | Описание                       | Возможные значения                                                       |
 | ---------- | ------------------------------ | ------------------------------------------------------------------------ |
@@ -40,13 +40,19 @@ go ~1.21
 `configs/config.yml`
 
 ```yml
-dsn: "$DB_DSN"
-dir: ./migrations
-type: sql
-table_name: migrations
+migrator:
+  dsn: $DB_DSN # DSN connection string to DB
+  dir: ./migrations # folder for migration files
+  type: sql # "go" or "sql"
+  table_name: migrations # name of table with migrations
+
+logger:
+  level: INFO
 ```
 
-`DB_DSN=SOME_ENV_HERE ./bin/gomigrator`
+`DB_DSN=SOME_ENV_HERE ./bin/gomigrator -config="configs/config.yml"`
+
+либо через флаги приложения (см. ниже)
 
 ## Использование
 
@@ -57,6 +63,10 @@ table_name: migrations
 ```bash
 go install github.com/XanderKon/sql-migrator-otus/cmd/gomigrator@latest
 ```
+
+#### Выбираем способ конфигурирования
+
+**С помощью файла конфигурации**
 
 Создаем файл конфигурации в нужном месте, следующего содержания:
 
@@ -71,15 +81,25 @@ logger:
   level: INFO
 ```
 
-Для запуска мигратора с нужным файлом конфигурации используем:
+и далее для запуска мигратора с нужным файлом конфигурации используем:
 
 ```bash
 gomigrator -config="configs/config.yml"
 ```
 
-По умолчанию используется путь `configs/config.yml`.
+По умолчанию файл конфигурации не используется!
 
-Проверяем, что все работает корректно:
+**С помощью флагов**
+
+Задаем нужные параметры через флаги конфигурации прилоежния, а именно:
+
+- `dsn` — является обязательным параметром
+- `dir` — "./migrations" по умолчанию
+- `tableName` — "migrations" по умолчанию
+
+#### Помощь
+
+Чтобы посмотреть как работает приложение можно вызвать команду `gomigrator help` (без каких-либо флагов и дополнительной конфигурации)
 
 ```bash
 gomigrator help
@@ -89,7 +109,10 @@ Usage: gomigrator [OPTIONS] COMMAND [arg...]
   You can override varuables from config file by ENV, just use something like "${DB_DSN}"
 
   OPTIONS:
-    -config         Path to configuration file
+    -config         Path to configuration file (no default value)
+    -dsn            DSN string to database
+    -dir            Folder for migrations files ("./migrations" by default)
+    -tableName      Name of migrations table ("migrations" by default)
 
   COMMAND:
     create [name]   Create migration with 'name'
@@ -115,7 +138,7 @@ https://github.com/golang-migrate/migrate
 **Создание миграции**
 
 ```bash
-gomigrator create test_migration
+gomigrator -config="./configs/config.yml" create test_migration
 
 2024-01-25 00:17:07 [INFO] Success create new migration 1706131027592_test_migration.sql
 ```
@@ -141,7 +164,7 @@ DROP TABLE test;
 **Запуск всех миграции**
 
 ```bash
-gomigrator up
+gomigrator -config="./configs/config.yml" up
 
 2024-01-25 00:17:19 [INFO] Migration 1706130758469 successfully applied!
 2024-01-25 00:17:19 [INFO] Migration 1706130758470 successfully applied!
@@ -152,7 +175,7 @@ gomigrator up
 **Откат последней выполненной миграции**
 
 ```bash
-gomigrator down
+gomigrator -config="./configs/config.yml" down
 
 2024-01-25 00:17:29 [INFO] Migration 1706131027592 successfully rollback!
 ```
@@ -160,16 +183,16 @@ gomigrator down
 **Повтор последней миграции**
 
 ```bash
-gomigrator redo
+gomigrator -config="./configs/config.yml" redo
 
 2024-01-25 00:17:40 [INFO] Migration 1706130758471 successfully rollback!
 2024-01-25 00:17:40 [INFO] Migration 1706130758471 successfully applied!
 ```
 
-**Вывод версии базы**
+**Вывод статуса миграций**
 
 ```bash
-gomigrator status
+gomigrator -config="./configs/config.yml" status
 
 +---+---------------+----------------------------------------+---------------------+
 | # |       VERSION | NAME                                   | APPLIED AT          |
@@ -182,10 +205,10 @@ gomigrator status
 +---+---------------+----------------------------------------+---------------------+
 ```
 
-**Вывод статуса миграций**
+**Вывод версии базы**
 
 ```bash
-gomigrator status
+gomigrator -config="./configs/config.yml" dbversion
 
 2024-01-25 00:18:29 [INFO] Current migration version: 1706130758471
 ```
