@@ -12,14 +12,6 @@ import (
 	"github.com/XanderKon/sql-migrator-otus/pkg/core"
 )
 
-var configFile string
-
-func init() {
-	if flag.Lookup("config") == nil {
-		flag.StringVar(&configFile, "config", "./configs/config.yml", "Path to configuration file")
-	}
-}
-
 func initFlags() {
 	flag.Usage = func() {
 		fmt.Fprintf(
@@ -29,7 +21,10 @@ func initFlags() {
   You can override varuables from config file by ENV, just use something like "${DB_DSN}"
 
   OPTIONS:
-    -config         Path to configuration file
+    -config         Path to configuration file (no default value)
+    -dsn            DSN string to database
+    -dir            Folder for migrations files ("./migrations" by default)
+    -tableName      Name of migrations table ("migrations" by default)	
 		
   COMMAND:
     create [name]   Create migration with 'name'
@@ -57,25 +52,26 @@ https://github.com/golang-migrate/migrate
 func Main() {
 	initFlags()
 
+	// get args
+	args := os.Args[1:]
+
+	// do not init anything if no aruments or just help
+	if len(args) == 0 || args[0] == "help" {
+		printUsage()
+	}
+
 	// init config
 	cfg := config.NewConfig()
 
 	// init logger
 	logger := logger.New(cfg.Logger.Level, os.Stdout)
 
-	// get args
-	args := flag.Args()
-
-	if len(args) == 0 {
-		printUsage()
-	}
-
 	var cmd command.Command
 
 	// init migrate api
 	migrator, err := core.NewMigrator(cfg.Migrator.DSN, cfg.Migrator.TableName, cfg.Migrator.Dir)
 	if err != nil {
-		logger.Error("can't initialize migrator api! %s", err)
+		logger.Error("[ERROR] Can't initialize migrator api! %s", err)
 		return
 	}
 
@@ -119,7 +115,7 @@ func Main() {
 		printUsage()
 	}
 
-	err = cmd.Run(args[1:])
+	err = cmd.Run(args[2:])
 	if errors.Is(err, core.ErrAlreadyUpToDate) || errors.Is(err, core.ErrNoAvailableMigrations) {
 		logger.Info(err.Error())
 	} else if err != nil {

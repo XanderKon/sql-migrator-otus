@@ -1,5 +1,5 @@
 migrator:
-  dsn: postgresql://postgres:postgres@db:5432/gomigrator?sslmode=disable # DSN connection string to DB
+  dsn: postgresql://postgres:postgres@localhost:5432/gomigrator?sslmode=disable # DSN connection string to DB
   dir: ./migrations # folder for migration files
   type: sql # "go" or "sql"
   table_name: migrations # name of table with migrations

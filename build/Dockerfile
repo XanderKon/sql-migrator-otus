@@ -26,7 +26,6 @@ ARG BIN
 WORKDIR /usr/bin
 
 COPY --from=builder /go/src/github.com/XanderKon/sql-migrator-otus/${BIN} .
-COPY ./configs ./configs
 
 # ENTRYPOINT ["gomigrator"]
 # CMD ["--help"]

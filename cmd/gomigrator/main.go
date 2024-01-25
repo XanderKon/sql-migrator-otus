@@ -1,15 +1,14 @@
 package main
 
 import (
-	"flag"
+	"os"
 
 	"github.com/XanderKon/sql-migrator-otus/internal/cli"
 )
 
 func main() {
-	flag.Parse()
-
-	if flag.Arg(0) == "version" {
+	args := os.Args
+	if len(args) > 1 && args[1] == "version" {
 		printVersion()
 		return
 	}
